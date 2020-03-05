@@ -1,19 +1,18 @@
-import * as core from '@actions/core'
-import {wait} from './wait'
+import {debug, setFailed, getInput} from '@actions/core'
+import {GitHub, context} from '@actions/github'
+import {allStatusPassedCheck} from './all-status-passed-check'
 
 async function run(): Promise<void> {
-  try {
-    const ms: string = core.getInput('milliseconds')
-    core.debug(`Waiting ${ms} milliseconds ...`)
+  const token = process.env.GITHUB_TOKEN
+  if (!token) throw ReferenceError('No Token found')
 
-    core.debug(new Date().toTimeString())
-    await wait(parseInt(ms, 10))
-    core.debug(new Date().toTimeString())
-
-    core.setOutput('time', new Date().toTimeString())
-  } catch (error) {
-    core.setFailed(error.message)
-  }
+  await allStatusPassedCheck({
+    debug,
+    setFailed,
+    getInput,
+    octokit: new GitHub(token),
+    context
+  })
 }
 
 run()

@@ -1,27 +1,107 @@
-import {wait} from '../src/wait'
-import * as process from 'process'
-import * as cp from 'child_process'
-import * as path from 'path'
+import {allStatusPassedCheck} from '../src/all-status-passed-check'
+import {GitHub} from '@actions/github'
+import {Context} from '@actions/github/lib/context'
+import {Octokit} from '@octokit/rest'
 
-test('throws invalid number', async () => {
-  const input = parseInt('foo', 10)
-  await expect(wait(input)).rejects.toThrow('milliseconds not a number')
+let context: Context
+let getWorkflowData: Object
+let getWorkflowResponse: Octokit.AnyResponse
+let getSuiteResponse: Octokit.AnyResponse
+let getSuiteData: Object
+
+beforeEach(() => {
+  context = {
+    repo: {
+      repo: 'some-repo',
+      owner: 'some-owner'
+    },
+    payload: {},
+    eventName: '',
+    sha: '',
+    ref: '',
+    workflow: '',
+    action: '',
+    actor: '',
+    issue: {
+      owner: '',
+      repo: '',
+      number: 1
+    }
+  }
+  getWorkflowData = {
+    check_suite_id: 1
+  }
+
+  const headers = {
+    date: '',
+    'x-ratelimit-limit': '',
+    'x-ratelimit-remaining': '',
+    'x-ratelimit-reset': '',
+    'x-Octokit-request-id': '',
+    'x-Octokit-media-type': '',
+    link: '',
+    'last-modified': '',
+    etag: '',
+    status: ''
+  }
+
+  getWorkflowResponse = {
+    data: getWorkflowData,
+    status: 200,
+    headers: headers,
+    [Symbol.iterator]: () => 'test'[Symbol.iterator]()
+  }
+
+  getSuiteData = {
+    checkRuns: [
+      {
+        conclusion: 'success'
+      }
+    ]
+  }
+
+  getSuiteResponse = {
+    data: getSuiteData,
+    status: 200,
+    headers: headers,
+    [Symbol.iterator]: () => 'test'[Symbol.iterator]()
+  }
 })
 
-test('wait 500 ms', async () => {
-  const start = new Date()
-  await wait(500)
-  const end = new Date()
-  var delta = Math.abs(end.getTime() - start.getTime())
-  expect(delta).toBeGreaterThan(450)
+let getWorkflowSpy: jest.SpyInstance
+let getSuiteSpy: jest.SpyInstance
+
+beforeEach(async () => {
+  const octokit = new GitHub('fakeToken')
+  getWorkflowSpy = jest
+    .spyOn(octokit.actions, 'getWorkflowRun')
+    .mockResolvedValue(getWorkflowResponse)
+  getSuiteSpy = jest
+    .spyOn(octokit.checks, 'listForSuite')
+    .mockResolvedValue(getSuiteResponse)
+
+  await allStatusPassedCheck({
+    octokit,
+    context,
+    debug: jest.fn(),
+    setFailed: jest.fn(),
+    getInput: jest.fn().mockReturnValue('1')
+  })
 })
 
 // shows how the runner will run a javascript action with env / stdout protocol
-test('test runs', () => {
-  process.env['INPUT_MILLISECONDS'] = '500'
-  const ip = path.join(__dirname, '..', 'lib', 'main.js')
-  const options: cp.ExecSyncOptions = {
-    env: process.env
-  }
-  console.log(cp.execSync(`node ${ip}`, options).toString())
+test('expect list branches to be called', () => {
+  expect(getWorkflowSpy).toHaveBeenCalledWith({
+    run_id: 1,
+    owner: 'some-owner',
+    repo: 'some-repo'
+  })
+})
+
+test('expect an issue to be created', () => {
+  expect(getSuiteSpy).toHaveBeenCalledWith({
+    repo: 'some-repo',
+    owner: 'some-owner',
+    check_suite_id: 1
+  })
 })
