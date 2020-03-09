@@ -2088,22 +2088,20 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const core_1 = __webpack_require__(470);
 function allStatusPassedCheck(actionContext) {
     return __awaiter(this, void 0, void 0, function* () {
-        const runId = actionContext.getInput('runId');
-        if (!runId)
-            throw ReferenceError('Run ID not set');
         try {
-            const run = yield actionContext.octokit.actions.getWorkflowRun(Object.assign(Object.assign({}, actionContext.context.repo), { 
-                //eslint-disable-next-line @typescript-eslint/camelcase
-                run_id: parseInt(runId) }));
-            const checkSuiteId = run.data.check_suite_id;
             const checks = yield actionContext.octokit.checks.listForSuite(Object.assign(Object.assign({}, actionContext.context.repo), { 
                 //eslint-disable-next-line @typescript-eslint/camelcase
-                check_suite_id: checkSuiteId }));
-            const successfulRuns = checks.data.check_runs.filter(value => value.conclusion === 'success');
-            if (successfulRuns.length > checks.data.total_count - 1) {
-                actionContext.setFailed('All checks have not run successfully');
+                check_suite_id: actionContext.context.payload['check_suite']['id'] }));
+            if (checks.data.check_runs.length > 0) {
+                const successfulRuns = checks.data.check_runs.filter(value => value.conclusion === 'success');
+                core_1.debug(`${successfulRuns.length} runs are successful`);
+                const conclusion = successfulRuns.length === checks.data.total_count
+                    ? 'success'
+                    : 'failure';
+                actionContext.octokit.checks.create(Object.assign(Object.assign({}, actionContext.context.repo), { 
+                    //eslint-disable-next-line @typescript-eslint/camelcase
+                    head_sha: checks.data.check_runs[0].head_sha, name: 'All checks pass', status: 'completed', conclusion }));
             }
-            core_1.debug(`${successfulRuns.length} runs are successful`);
         }
         catch (error) {
             actionContext.setFailed(error.message);
