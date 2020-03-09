@@ -1,23 +1,9 @@
-# GitHub action to verify all status checks complete successfully
-
-After installation this action will iterate through all of your checks and pass if all your other checks pass.
-
-## Installation
-
-To configure the action add the following lines to your `.github/workflows/rebase.yml` workflow file:
-
-```yml
-on: check_run_completed
-name: Check Run
-jobs:
-  checkForSuccess:
-    name: Success Check
-    runs-on: ubuntu-latest
-    steps:
-    - name: Check
-      uses: arup-group/action-all-checks-passed@master
-      with:
-        runId: ${{ github.run_id }}
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-```
+name: 'All Checks Passed'
+description: 'Makes sure all other checks for a commit have passed'
+author: 'Arup Group'
+branding:
+  icon: 'check-circle'
+  color: 'green'
+runs:
+  using: 'node12'
+  main: 'dist/index.js'
