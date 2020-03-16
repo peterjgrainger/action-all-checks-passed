@@ -37,21 +37,23 @@ export async function allStatusPassedCheck(
         .join('\n')
       debug(`${successfulRuns.length} runs are successful`)
 
+      const hasSuccessCheckInSuite = currentAllChecksRun.length !== 0
+
+      const totalCheckRuns = hasSuccessCheckInSuite
+        ? checks.data.total_count - 1
+        : checks.data.total_count
+
       const conclusion =
-        successfulRuns.length === checks.data.total_count
-          ? 'success'
-          : 'failure'
+        successfulRuns.length === totalCheckRuns ? 'success' : 'failure'
 
       debug(`conclusion was ${conclusion}`)
 
-      // Update current run or make a new "Check all"
-      if (currentAllChecksRun.length === 0) {
-        debug('Adding new check')
-        actionContext.octokit.checks.create({
+      if (hasSuccessCheckInSuite) {
+        debug('updating existing check')
+        actionContext.octokit.checks.update({
           ...actionContext.context.repo,
           //eslint-disable-next-line @typescript-eslint/camelcase
-          head_sha: eventPayloadHeadSha,
-          name: 'All checks pass',
+          check_run_id: currentAllChecksRun[0].id,
           status: 'completed',
           conclusion,
           output: {
@@ -60,11 +62,12 @@ export async function allStatusPassedCheck(
           }
         })
       } else {
-        debug('updating existing check')
-        actionContext.octokit.checks.update({
+        debug('Adding new check')
+        actionContext.octokit.checks.create({
           ...actionContext.context.repo,
           //eslint-disable-next-line @typescript-eslint/camelcase
-          check_run_id: currentAllChecksRun[0].id,
+          head_sha: eventPayloadHeadSha,
+          name: 'All checks pass',
           status: 'completed',
           conclusion,
           output: {
