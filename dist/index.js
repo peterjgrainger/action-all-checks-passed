@@ -2089,8 +2089,10 @@ const core_1 = __webpack_require__(470);
 function allStatusPassedCheck(actionContext) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            const eventPayloadRunId = actionContext.context.payload['check_run']['head_sha'];
-            const checks = yield actionContext.octokit.checks.listForRef(Object.assign(Object.assign({}, actionContext.context.repo), { ref: eventPayloadRunId }));
+            const eventPayloadHeadSha = actionContext.context.payload['check_run']['head_sha'];
+            core_1.debug(`Getting all checks for ref ${eventPayloadHeadSha}`);
+            const checks = yield actionContext.octokit.checks.listForRef(Object.assign(Object.assign({}, actionContext.context.repo), { ref: eventPayloadHeadSha }));
+            core_1.debug(`Got back ${checks.data.total_count} checks`);
             const runs = checks.data.check_runs;
             if (checks.data.check_runs.length > 0) {
                 const currentAllChecksRun = runs.filter(value => (value.name = 'All checks pass'));
@@ -2099,13 +2101,16 @@ function allStatusPassedCheck(actionContext) {
                 const conclusion = successfulRuns.length === checks.data.total_count
                     ? 'success'
                     : 'failure';
+                core_1.debug(`conclusion was ${conclusion}`);
                 // Update current run or make a new "Check all"
                 if (currentAllChecksRun.length === 0) {
+                    core_1.debug('Adding new check');
                     actionContext.octokit.checks.create(Object.assign(Object.assign({}, actionContext.context.repo), { 
                         //eslint-disable-next-line @typescript-eslint/camelcase
-                        head_sha: eventPayloadRunId, name: 'All checks pass', status: 'completed', conclusion }));
+                        head_sha: eventPayloadHeadSha, name: 'All checks pass', status: 'completed', conclusion }));
                 }
                 else {
+                    core_1.debug('updating existing check');
                     actionContext.octokit.checks.update(Object.assign(Object.assign({}, actionContext.context.repo), { 
                         //eslint-disable-next-line @typescript-eslint/camelcase
                         check_run_id: currentAllChecksRun[0].id, status: 'completed', conclusion }));

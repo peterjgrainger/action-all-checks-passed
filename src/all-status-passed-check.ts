@@ -5,13 +5,17 @@ export async function allStatusPassedCheck(
   actionContext: ActionContext
 ): Promise<void> {
   try {
-    const eventPayloadRunId =
+    const eventPayloadHeadSha =
       actionContext.context.payload['check_run']['head_sha']
+
+    debug(`Getting all checks for ref ${eventPayloadHeadSha}`)
 
     const checks = await actionContext.octokit.checks.listForRef({
       ...actionContext.context.repo,
-      ref: eventPayloadRunId
+      ref: eventPayloadHeadSha
     })
+
+    debug(`Got back ${checks.data.total_count} checks`)
 
     const runs = checks.data.check_runs
 
@@ -32,17 +36,21 @@ export async function allStatusPassedCheck(
           ? 'success'
           : 'failure'
 
+      debug(`conclusion was ${conclusion}`)
+
       // Update current run or make a new "Check all"
       if (currentAllChecksRun.length === 0) {
+        debug('Adding new check')
         actionContext.octokit.checks.create({
           ...actionContext.context.repo,
           //eslint-disable-next-line @typescript-eslint/camelcase
-          head_sha: eventPayloadRunId,
+          head_sha: eventPayloadHeadSha,
           name: 'All checks pass',
           status: 'completed',
           conclusion
         })
       } else {
+        debug('updating existing check')
         actionContext.octokit.checks.update({
           ...actionContext.context.repo,
           //eslint-disable-next-line @typescript-eslint/camelcase
