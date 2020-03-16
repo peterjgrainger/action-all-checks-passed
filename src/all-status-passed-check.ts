@@ -21,7 +21,7 @@ export async function allStatusPassedCheck(
 
     if (checks.data.check_runs.length > 0) {
       const currentAllChecksRun = runs.filter(
-        value => (value.name = 'All checks pass')
+        value => value.name === 'All checks pass'
       )
 
       const successfulRuns = runs.filter(

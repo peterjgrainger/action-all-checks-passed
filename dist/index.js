@@ -2095,7 +2095,7 @@ function allStatusPassedCheck(actionContext) {
             core_1.debug(`Got back ${checks.data.total_count} checks`);
             const runs = checks.data.check_runs;
             if (checks.data.check_runs.length > 0) {
-                const currentAllChecksRun = runs.filter(value => (value.name = 'All checks pass'));
+                const currentAllChecksRun = runs.filter(value => value.name === 'All checks pass');
                 const successfulRuns = runs.filter(value => value.conclusion === 'success' && value.name !== 'All checks pass');
                 core_1.debug(`${successfulRuns.length} runs are successful`);
                 const conclusion = successfulRuns.length === checks.data.total_count
