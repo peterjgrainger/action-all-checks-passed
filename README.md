@@ -8,17 +8,15 @@ To configure the action add the following lines to your `.github/workflows/rebas
 
 ```yml
 on: check_run
+  type: [completed]
 name: success-check
 jobs:
   checkForSuccess:
     name: success-check
-    if: github.event.check_run.name !== 'success-check' && github.event.check_run.status === 'completed'
     runs-on: ubuntu-latest
     steps:
     - name: Check
       uses: arup-group/action-all-checks-passed@master
-      with:
-        runId: ${{ github.run_id }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
