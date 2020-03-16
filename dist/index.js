@@ -2097,6 +2097,8 @@ function allStatusPassedCheck(actionContext) {
             if (checks.data.check_runs.length > 0) {
                 const currentAllChecksRun = runs.filter(value => value.name === 'All checks pass');
                 const successfulRuns = runs.filter(value => value.conclusion === 'success' && value.name !== 'All checks pass');
+                const statusMessage = runs.map(value => `The check for ${value.name} was ${value.status}: ${value.conclusion}`)
+                    .join('\n');
                 core_1.debug(`${successfulRuns.length} runs are successful`);
                 const conclusion = successfulRuns.length === checks.data.total_count
                     ? 'success'
@@ -2107,13 +2109,19 @@ function allStatusPassedCheck(actionContext) {
                     core_1.debug('Adding new check');
                     actionContext.octokit.checks.create(Object.assign(Object.assign({}, actionContext.context.repo), { 
                         //eslint-disable-next-line @typescript-eslint/camelcase
-                        head_sha: eventPayloadHeadSha, name: 'All checks pass', status: 'completed', conclusion }));
+                        head_sha: eventPayloadHeadSha, name: 'All checks pass', status: 'completed', conclusion, output: {
+                            title: 'Detail',
+                            summary: statusMessage
+                        } }));
                 }
                 else {
                     core_1.debug('updating existing check');
                     actionContext.octokit.checks.update(Object.assign(Object.assign({}, actionContext.context.repo), { 
                         //eslint-disable-next-line @typescript-eslint/camelcase
-                        check_run_id: currentAllChecksRun[0].id, status: 'completed', conclusion }));
+                        check_run_id: currentAllChecksRun[0].id, status: 'completed', conclusion, output: {
+                            title: 'Detail',
+                            summary: statusMessage
+                        } }));
                 }
             }
         }

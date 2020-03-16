@@ -29,6 +29,12 @@ export async function allStatusPassedCheck(
           value.conclusion === 'success' && value.name !== 'All checks pass'
       )
 
+      const statusMessage = runs
+        .map(
+          value =>
+            `The check for ${value.name} was ${value.status}: ${value.conclusion}`
+        )
+        .join('\n')
       debug(`${successfulRuns.length} runs are successful`)
 
       const conclusion =
@@ -47,7 +53,11 @@ export async function allStatusPassedCheck(
           head_sha: eventPayloadHeadSha,
           name: 'All checks pass',
           status: 'completed',
-          conclusion
+          conclusion,
+          output: {
+            title: 'Detail',
+            summary: statusMessage
+          }
         })
       } else {
         debug('updating existing check')
@@ -56,7 +66,11 @@ export async function allStatusPassedCheck(
           //eslint-disable-next-line @typescript-eslint/camelcase
           check_run_id: currentAllChecksRun[0].id,
           status: 'completed',
-          conclusion
+          conclusion,
+          output: {
+            title: 'Detail',
+            summary: statusMessage
+          }
         })
       }
     }
