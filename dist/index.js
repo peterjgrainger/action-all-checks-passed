@@ -2089,18 +2089,42 @@ const core_1 = __webpack_require__(470);
 function allStatusPassedCheck(actionContext) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            const checks = yield actionContext.octokit.checks.listForSuite(Object.assign(Object.assign({}, actionContext.context.repo), { 
-                //eslint-disable-next-line @typescript-eslint/camelcase
-                check_suite_id: actionContext.context.payload['check_suite']['id'] }));
+            const eventPayloadHeadSha = actionContext.context.payload['check_run']['head_sha'];
+            core_1.debug(`Getting all checks for ref ${eventPayloadHeadSha}`);
+            const checks = yield actionContext.octokit.checks.listForRef(Object.assign(Object.assign({}, actionContext.context.repo), { ref: eventPayloadHeadSha }));
+            core_1.debug(`Got back ${checks.data.total_count} checks`);
+            const runs = checks.data.check_runs;
             if (checks.data.check_runs.length > 0) {
-                const successfulRuns = checks.data.check_runs.filter(value => value.conclusion === 'success');
+                const currentAllChecksRun = runs.filter(value => value.name === 'All checks pass');
+                const successfulRuns = runs.filter(value => value.conclusion === 'success' && value.name !== 'All checks pass');
+                const statusMessage = runs
+                    .map(value => `The check for ${value.name} was ${value.status}: ${value.conclusion}`)
+                    .join('\n');
                 core_1.debug(`${successfulRuns.length} runs are successful`);
-                const conclusion = successfulRuns.length === checks.data.total_count
+                const hasSuccessCheckInSuite = currentAllChecksRun.length !== 0;
+                const totalCheckRuns = hasSuccessCheckInSuite ? checks.data.total_count - 1 : checks.data.total_count;
+                const conclusion = successfulRuns.length === totalCheckRuns
                     ? 'success'
                     : 'failure';
-                actionContext.octokit.checks.create(Object.assign(Object.assign({}, actionContext.context.repo), { 
-                    //eslint-disable-next-line @typescript-eslint/camelcase
-                    head_sha: checks.data.check_runs[0].head_sha, name: 'All checks pass', status: 'completed', conclusion }));
+                core_1.debug(`conclusion was ${conclusion}`);
+                if (hasSuccessCheckInSuite) {
+                    core_1.debug('updating existing check');
+                    actionContext.octokit.checks.update(Object.assign(Object.assign({}, actionContext.context.repo), { 
+                        //eslint-disable-next-line @typescript-eslint/camelcase
+                        check_run_id: currentAllChecksRun[0].id, status: 'completed', conclusion, output: {
+                            title: 'Detail',
+                            summary: statusMessage
+                        } }));
+                }
+                else {
+                    core_1.debug('Adding new check');
+                    actionContext.octokit.checks.create(Object.assign(Object.assign({}, actionContext.context.repo), { 
+                        //eslint-disable-next-line @typescript-eslint/camelcase
+                        head_sha: eventPayloadHeadSha, name: 'All checks pass', status: 'completed', conclusion, output: {
+                            title: 'Detail',
+                            summary: statusMessage
+                        } }));
+                }
             }
         }
         catch (error) {
