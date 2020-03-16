@@ -5,15 +5,24 @@ export async function allStatusPassedCheck(
   actionContext: ActionContext
 ): Promise<void> {
   try {
-    const checks = await actionContext.octokit.checks.listForSuite({
+    const eventPayloadRunId =
+      actionContext.context.payload['check_run']['head_sha']
+
+    const checks = await actionContext.octokit.checks.listForRef({
       ...actionContext.context.repo,
-      //eslint-disable-next-line @typescript-eslint/camelcase
-      check_suite_id: actionContext.context.payload['check_suite']['id']
+      ref: eventPayloadRunId
     })
 
+    const runs = checks.data.check_runs
+
     if (checks.data.check_runs.length > 0) {
-      const successfulRuns = checks.data.check_runs.filter(
-        value => value.conclusion === 'success'
+      const currentAllChecksRun = runs.filter(
+        value => (value.name = 'All checks pass')
+      )
+
+      const successfulRuns = runs.filter(
+        value =>
+          value.conclusion === 'success' && value.name !== 'All checks pass'
       )
 
       debug(`${successfulRuns.length} runs are successful`)
@@ -23,14 +32,25 @@ export async function allStatusPassedCheck(
           ? 'success'
           : 'failure'
 
-      actionContext.octokit.checks.create({
-        ...actionContext.context.repo,
-        //eslint-disable-next-line @typescript-eslint/camelcase
-        head_sha: checks.data.check_runs[0].head_sha,
-        name: 'All checks pass',
-        status: 'completed',
-        conclusion
-      })
+      // Update current run or make a new "Check all"
+      if (currentAllChecksRun.length === 0) {
+        actionContext.octokit.checks.create({
+          ...actionContext.context.repo,
+          //eslint-disable-next-line @typescript-eslint/camelcase
+          head_sha: eventPayloadRunId,
+          name: 'All checks pass',
+          status: 'completed',
+          conclusion
+        })
+      } else {
+        actionContext.octokit.checks.update({
+          ...actionContext.context.repo,
+          //eslint-disable-next-line @typescript-eslint/camelcase
+          check_run_id: currentAllChecksRun[0].id,
+          status: 'completed',
+          conclusion
+        })
+      }
     }
   } catch (error) {
     actionContext.setFailed(error.message)
