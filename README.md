@@ -7,8 +7,9 @@ After installation this action will iterate through all of your checks and pass 
 To configure the action add the following lines to your `.github/workflows/rebase.yml` workflow file:
 
 ```yml
-on: check_run
-  type: [completed]
+on: 
+  check_run:
+    types: [completed]
 name: success-check
 jobs:
   checkForSuccess:
